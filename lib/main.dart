@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import './screens/quotes.dart';
+import './screens/favorites.dart';
 
 void main() {
   runApp(MyApp());
@@ -15,117 +14,58 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Quotes'),
+      home: HomePage(),
     );
   }
 }
 
-Future<List<Quote>> getQuotes() async {
-  http.Response response = await http.get(
-      Uri.https("poloniex.com", "/public", {'command': 'returnTicker'}),
-      headers: {"Accept": "application/json"});
-  var result = json.decode(response.body) as Map<String, dynamic>;
-  var quotes = <Quote>[];
+class HomePage extends StatefulWidget {
+  const HomePage({Key key}) : super(key: key);
 
-  result.forEach((k, v) => quotes.add(Quote(k, v['last'], v['percentChange'])));
-  print('result');
-  return quotes;
+  @override
+  _HomePageState createState() => _HomePageState();
 }
 
-class MyHomePage extends StatelessWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-  final String title;
+/// This is the private State class that goes with MyStatefulWidget.
+class _HomePageState extends State<HomePage> {
+  int _selectedIndex = 0;
+  static List<Quote> favoriteQuotes = [];
+
+  static List<Widget> _widgetOptions = <Widget>[
+    FavoritesListWidget(favoriteQuotes: favoriteQuotes),
+    QuotesListWidget(title: 'Quotes'),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(this.title),
+      // appBar: AppBar(
+      //     title: const Text('BottomNavigationBar Sample'),
+      //     ),
+      body: Center(
+        child: _widgetOptions.elementAt(_selectedIndex),
       ),
-      body: Container(
-        child: FutureBuilder(
-          future: getQuotes(),
-          builder: (BuildContext context, AsyncSnapshot<List<Quote>> snapshot) {
-            print('snapshot $snapshot');
-            if (snapshot.hasData) {
-              print('snapshot.hasData');
-              final List<Quote> data = snapshot.data;
-              return ListView.builder(
-                  itemCount: snapshot.data.length,
-                  itemBuilder: (BuildContext context, int index) =>
-                      QuoteWidget(quote: data[index]));
-            } else {
-              return Center(child: CircularProgressIndicator());
-            }
-          },
-        ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.star_border),
+            label: 'Favorites',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.business),
+            label: 'Quotes',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.amber[800],
+        onTap: _onItemTapped,
       ),
     );
-  }
-}
-
-class Quote {
-  String pairName;
-  String last;
-  String percentChange;
-
-  Quote(this.pairName, this.last, this.percentChange);
-
-  @override
-  String toString() {
-    return '{Quote ${this.pairName}, ${this.last} ${this.percentChange}}';
-  }
-}
-
-class QuoteWidget extends StatelessWidget {
-  QuoteWidget({Key key, @required this.quote}) : super(key: key);
-  final Quote quote;
-
-  Function onPress(String name) =>
-      (bool pressed) => print('name $name pressed $pressed');
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-        padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
-        child: ListTile(
-          title: Text(quote.pairName,
-              style: TextStyle(
-                  color: Theme.of(context).primaryColor,
-                  fontSize: 20.0,
-                  fontWeight: FontWeight.w600)),
-          subtitle: Text(
-            '${quote.last} ${quote.percentChange}%',
-            style: TextStyle(fontSize: 16.0),
-          ),
-          trailing: StarButton(onPress: onPress(quote.pairName)),
-        ));
-  }
-}
-
-class StarButton extends StatefulWidget {
-  StarButton({@required this.onPress});
-  final Function onPress;
-
-  @override
-  _StarButton createState() => _StarButton();
-}
-
-class _StarButton extends State<StarButton> {
-  bool pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-        icon: const Icon(Icons.star_border),
-        tooltip: 'Add to favorit',
-        onPressed: () {
-          setState(() {
-            pressed = !pressed;
-          });
-          widget.onPress(pressed);
-        },
-        iconSize: 30,
-        color: pressed ? Colors.yellow : null);
   }
 }
