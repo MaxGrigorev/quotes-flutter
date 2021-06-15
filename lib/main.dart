@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import './screens/quotes.dart';
 import './screens/favorites.dart';
+import './widgets/quote.dart';
 
 void main() {
   runApp(MyApp());
@@ -29,27 +32,55 @@ class HomePage extends StatefulWidget {
 /// This is the private State class that goes with MyStatefulWidget.
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
-  static List<Quote> favoriteQuotes = [];
+  Map<String, Quote> quotes = {};
+  Map<String, bool> favoriteQuotes = {};
 
-  static List<Widget> _widgetOptions = <Widget>[
-    FavoritesListWidget(favoriteQuotes: favoriteQuotes),
-    QuotesListWidget(title: 'Quotes'),
-  ];
+  void _onPress(String name, bool pressed) {
+    this.favoriteQuotes[name] = pressed;
+
+    return setState(() {
+      this.favoriteQuotes[name] = pressed;
+    });
+  }
 
   void _onItemTapped(int index) {
     setState(() {
-      _selectedIndex = index;
+      this._selectedIndex = index;
     });
+  }
+
+  @override
+  void initState() {
+    Timer.periodic(new Duration(seconds: 5), (timer) {
+      getQuotes().then((responce) {
+        setState(() {
+          this.quotes = responce;
+        });
+      });
+    });
+
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //     title: const Text('BottomNavigationBar Sample'),
-      //     ),
       body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
+        child: [
+          FavoritesListWidget(
+              favoriteQuotes: Map.from(this.favoriteQuotes)
+                ..removeWhere((k, v) => v == false),
+              quotes: quotes,
+              onPress: (String name, bool pressed) {
+                this._onPress(name, pressed);
+              }),
+          QuotesListWidget(
+              favoriteQuotes: this.favoriteQuotes,
+              quotes: quotes,
+              onPress: (String name, bool pressed) {
+                this._onPress(name, pressed);
+              }),
+        ].elementAt(_selectedIndex),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
